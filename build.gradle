@@ -1,0 +1,39 @@
+plugins {
+    id "java-library"
+    id "checkstyle"
+    id "pmd"
+    id "com.github.spotbugs" version "4.6.0"
+}
+
+group = "de.siegmar"
+version = "1.0.0-SNAPSHOT"
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+    withJavadocJar()
+    withSourcesJar()
+}
+
+pmd {
+    consoleOutput = true
+    ruleSets = []
+    ruleSetFiles = files("config/pmd/pmd.xml")
+}
+
+test {
+    useJUnitPlatform()
+}
+
+dependencies {
+    implementation "com.github.docker-java:docker-java:3.2.7"
+    runtime "ch.qos.logback:logback-classic:1.2.3"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:5.7.0"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:5.7.0"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:5.7.0"
+}
