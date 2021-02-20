@@ -1,0 +1,8 @@
+{
+  "id": "writer-1",
+  "description": "One record with one field",
+  "settings": {},
+  "records": [
+    { "fields" : ["foo"] }
+  ]
+}

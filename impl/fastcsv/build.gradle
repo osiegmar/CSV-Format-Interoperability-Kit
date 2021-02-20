@@ -11,12 +11,13 @@ repositories {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(8)
+        languageVersion = JavaLanguageVersion.of(11)
     }
 }
 
 dependencies {
     implementation "de.siegmar:fastcsv:2.0.0"
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.12.1"
 }
 
 application {

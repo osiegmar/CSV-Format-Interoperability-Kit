@@ -1,1 +1,3 @@
 rootProject.name = 'csvfik'
+
+includeBuild 'impl/fastcsv'
