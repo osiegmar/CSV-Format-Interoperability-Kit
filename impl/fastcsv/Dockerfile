@@ -1,10 +1,6 @@
-FROM openjdk:11
+FROM gradle:6.8.2-jdk11
 WORKDIR /app
-COPY gradlew settings.gradle ./
-COPY gradle gradle
-RUN ./gradlew --version
-COPY build.gradle ./
+COPY settings.gradle build.gradle ./
 COPY src src
-RUN ./gradlew installDist
-COPY entrypoint.sh ./
-ENTRYPOINT ["/app/entrypoint.sh"]
+RUN gradle installDist
+ENTRYPOINT ["/app/build/install/fastcsv-cli/bin/fastcsv-cli"]

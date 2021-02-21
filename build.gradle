@@ -18,6 +18,10 @@ java {
     }
 }
 
+spotbugs {
+    toolVersion = '4.2.0'
+}
+
 pmd {
     consoleOutput = true
     ruleSets = []

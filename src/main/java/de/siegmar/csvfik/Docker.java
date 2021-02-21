@@ -27,7 +27,7 @@ import com.github.dockerjava.api.model.Volume;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.jaxrs.JerseyDockerHttpClient;
 
-@SuppressWarnings("checkstyle:ClassDataAbstractionCoupling")
+@SuppressWarnings({"checkstyle:ClassDataAbstractionCoupling", "checkstyle:ClassFanOutComplexity"})
 public class Docker implements Closeable {
 
     private static final Logger LOG = LoggerFactory.getLogger(Docker.class);
@@ -45,14 +45,16 @@ public class Docker implements Closeable {
             .build();
     }
 
-    public void run(final String project, final String testId) throws IOException, InterruptedException {
-        try (MDC.MDCCloseable ignored = MDC.putCloseable("test", project + "-" + testId)) {
-            final String imageId = buildImage(project);
+    public String build(final String project) {
+        return buildImage(project);
+    }
 
+    public void run(final Project project, final Test test) throws IOException, InterruptedException {
+        try (MDC.MDCCloseable ignored = MDC.putCloseable("test", project.getName() + "-" + test.getName())) {
             final String localPath = Paths.get("tests").toAbsolutePath().toString();
-            final Path resultPath = Files.createDirectories(Paths.get("/tmp/csvfik", project));
+            final Path resultPath = Files.createDirectories(Paths.get("/tmp/csvfik", project.getName()));
 
-            final String containerId = createContainer(project, imageId, localPath, resultPath, testId);
+            final String containerId = createContainer(project, localPath, resultPath, test);
 
             try {
                 startAndLog(project, containerId);
@@ -60,38 +62,39 @@ public class Docker implements Closeable {
                 removeContainer(project, containerId);
             }
 
-            compareResult(resultPath, testId);
+            compareResult(resultPath, test);
         }
     }
 
-    private String buildImage(final String project) {
-        LOG.info("Create docker image for {}", project);
+    private String buildImage(final String projectName) {
+        LOG.info("Create docker image for {}", projectName);
 
-        final String imageId = dockerClient.buildImageCmd(new File("impl/" + project))
+        final String imageId = dockerClient.buildImageCmd(new File("impl/" + projectName))
             .exec(new BuildImageResultCallback())
             .awaitImageId();
 
-        LOG.info("Image for {} created: {}; Creating container", project, imageId);
+        LOG.info("Image for {} created: {}; Creating container", projectName, imageId);
         return imageId;
     }
 
-    private String createContainer(final String project, final String imageId,
-                                   final String localPath, final Path resultPath, final String testId) {
-        final String containerId = dockerClient.createContainerCmd(imageId)
+    private String createContainer(final Project project,
+                                   final String localPath, final Path resultPath, final Test test) {
+        final String containerId = dockerClient.createContainerCmd(project.getImageId())
             .withHostConfig(new HostConfig()
                 .withBinds(
                     new Bind(localPath, new Volume("/tests"), AccessMode.ro),
                     new Bind(resultPath.toAbsolutePath().toString(), new Volume("/out"))
                 )
             )
-            .withCmd("write", "/tests/writer/" + testId + ".json", "/out/" + testId + ".csv")
+            .withCmd("write", "/" + test.getPath().toString(), "/out/" + test.getName() + ".csv")
             .exec().getId();
 
-        LOG.info("Container for {} created: {} (Image-ID: {}); Starting container", project, containerId, imageId);
+        LOG.info("Container for {} created: {} (Image-ID: {}); Starting container",
+            project, containerId, project.getImageId());
         return containerId;
     }
 
-    private void startAndLog(final String project, final String containerId)
+    private void startAndLog(final Project project, final String containerId)
         throws InterruptedException, IOException {
 
         dockerClient.startContainerCmd(containerId).exec();
@@ -122,15 +125,15 @@ public class Docker implements Closeable {
         };
     }
 
-    private void removeContainer(final String project, final String containerId) {
+    private void removeContainer(final Project project, final String containerId) {
         LOG.info("Removing container for {} (Container-ID: {})", project, containerId);
         dockerClient.removeContainerCmd(containerId);
     }
 
-    private void compareResult(final Path resultPath, final String testId) throws IOException {
-        final Path expectedFile = Paths.get("expects/" + testId + ".csv");
+    private void compareResult(final Path resultPath, final Test test) throws IOException {
+        final Path expectedFile = Paths.get("expects/" + test.getName() + ".csv");
 
-        final byte[] dataResultFile = Files.readAllBytes(resultPath.resolve(Paths.get(testId + ".csv")));
+        final byte[] dataResultFile = Files.readAllBytes(resultPath.resolve(Paths.get(test.getName() + ".csv")));
         final byte[] dataExpectedFile = Files.readAllBytes(expectedFile);
         if (Arrays.equals(dataResultFile, dataExpectedFile)) {
             LOG.info("Files are the same");

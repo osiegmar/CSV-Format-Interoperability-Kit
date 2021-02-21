@@ -40,7 +40,7 @@ public class FastCsv {
         System.out.println("Work on test " + test.getId());
 
         try (CsvWriter csv = CsvWriter.builder().build(csvFile, StandardCharsets.UTF_8)) {
-            for (final Record record : test.getRecords()) {
+            for (final Test.Record record : test.getRecords()) {
                 csv.writeRow(record.getFields());
             }
         }
