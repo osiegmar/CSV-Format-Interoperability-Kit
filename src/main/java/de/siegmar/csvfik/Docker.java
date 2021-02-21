@@ -12,6 +12,7 @@ import java.util.Arrays;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
@@ -45,20 +46,22 @@ public class Docker implements Closeable {
     }
 
     public void run(final String project, final String testId) throws IOException, InterruptedException {
-        final String imageId = buildImage(project);
+        try (MDC.MDCCloseable ignored = MDC.putCloseable("test", project + "-" + testId)) {
+            final String imageId = buildImage(project);
 
-        final String localPath = Paths.get("tests").toAbsolutePath().toString();
-        final Path resultPath = Files.createDirectories(Paths.get("/tmp/csvfik", project));
+            final String localPath = Paths.get("tests").toAbsolutePath().toString();
+            final Path resultPath = Files.createDirectories(Paths.get("/tmp/csvfik", project));
 
-        final String containerId = createContainer(project, imageId, localPath, resultPath, testId);
+            final String containerId = createContainer(project, imageId, localPath, resultPath, testId);
 
-        try {
-            startAndLog(project, containerId);
-        } finally {
-            removeContainer(project, containerId);
+            try {
+                startAndLog(project, containerId);
+            } finally {
+                removeContainer(project, containerId);
+            }
+
+            compareResult(resultPath, testId);
         }
-
-        compareResult(resultPath, testId);
     }
 
     private String buildImage(final String project) {
@@ -98,20 +101,22 @@ public class Docker implements Closeable {
 
         LOG.info("Gathering logs of Container for {} (Container-ID: {})", project, containerId);
 
-        try (ResultCallback.Adapter<Frame> resultCallback = newCallback()) {
+        try (ResultCallback.Adapter<Frame> resultCallback = newCallback(MDC.get("test"))) {
             dockerClient.logContainerCmd(containerId).withStdOut(true).withStdErr(true).exec(resultCallback)
                 .awaitCompletion();
         }
     }
 
-    private static ResultCallback.Adapter<Frame> newCallback() {
+    private ResultCallback.Adapter<Frame> newCallback(final String testContext) {
         return new ResultCallback.Adapter<>() {
             @Override
             public void onNext(final Frame object) {
-                if (object.getStreamType() == StreamType.STDOUT) {
-                    LOG.info("Container output: {}", object);
-                } else if (object.getStreamType() == StreamType.STDERR) {
-                    LOG.error("Container error: {}", object);
+                try (MDC.MDCCloseable ignored = MDC.putCloseable("test", testContext)) {
+                    if (object.getStreamType() == StreamType.STDOUT) {
+                        LOG.info("Container output: {}", object);
+                    } else if (object.getStreamType() == StreamType.STDERR) {
+                        LOG.error("Container error: {}", object);
+                    }
                 }
             }
         };
