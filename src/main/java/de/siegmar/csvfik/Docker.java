@@ -73,7 +73,7 @@ public class Docker implements Closeable {
             .exec(new BuildImageResultCallback())
             .awaitImageId();
 
-        LOG.info("Image for {} created: {}; Creating container", projectName, imageId);
+        LOG.info("Image for {} created: {}", projectName, imageId);
         return imageId;
     }
 

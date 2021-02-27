@@ -16,10 +16,10 @@ java {
 }
 
 dependencies {
-    implementation "de.siegmar:fastcsv:2.0.0"
+    implementation 'org.simpleflatmapper:sfm-csv:8.2.3'
     implementation "com.fasterxml.jackson.core:jackson-databind:2.12.1"
 }
 
 application {
-    mainClass = "de.siegmar.fastcsv.cli.Main"
+    mainClass = "de.siegmar.sfm.cli.Main"
 }
