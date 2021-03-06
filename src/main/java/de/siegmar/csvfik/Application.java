@@ -10,29 +10,42 @@ import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
-public class Runner {
+@SpringBootApplication
+public class Application implements CommandLineRunner {
 
-    private static final Logger LOG = LoggerFactory.getLogger(Runner.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Application.class);
+
+    private final transient Docker docker;
+
+    public Application(final Docker docker) {
+        this.docker = docker;
+    }
 
     @SuppressWarnings("checkstyle:UncommentedMain")
-    public static void main(final String[] args) throws Exception {
+    public static void main(final String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+
+    @Override
+    public void run(final String... args) throws Exception {
         final List<Project> projects = listProjects();
 
-        try (Docker docker = new Docker()) {
+        for (final Project project : projects) {
+            LOG.info("Run for project {}", project);
+            project.setImageId(docker.build(project.getName()));
+        }
+
+        final List<Test> tests = listTests();
+
+        for (final Test test : tests) {
             for (final Project project : projects) {
-                LOG.info("Run for project {}", project);
-                project.setImageId(docker.build(project.getName()));
-            }
-
-            final List<Test> tests = listTests();
-
-            for (final Test test : tests) {
-                for (final Project project : projects) {
-                    LOG.info("Run test {} for project {}", test, project);
-                    docker.run(project, test);
-                }
+                LOG.info("Run test {} for project {}", test, project);
+                docker.run(project, test);
             }
         }
     }

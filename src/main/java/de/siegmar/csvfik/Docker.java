@@ -1,10 +1,7 @@
 package de.siegmar.csvfik;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -13,6 +10,7 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
@@ -24,25 +22,16 @@ import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.StreamType;
 import com.github.dockerjava.api.model.Volume;
-import com.github.dockerjava.core.DockerClientBuilder;
-import com.github.dockerjava.jaxrs.JerseyDockerHttpClient;
 
-@SuppressWarnings({"checkstyle:ClassDataAbstractionCoupling", "checkstyle:ClassFanOutComplexity"})
-public class Docker implements Closeable {
+@Service
+public class Docker {
 
     private static final Logger LOG = LoggerFactory.getLogger(Docker.class);
 
-    private final transient JerseyDockerHttpClient httpClient;
     private final transient DockerClient dockerClient;
 
-    public Docker() throws URISyntaxException {
-        httpClient = new JerseyDockerHttpClient.Builder()
-            .dockerHost(new URI("unix:///var/run/docker.sock"))
-            .build();
-
-        dockerClient = DockerClientBuilder.getInstance()
-            .withDockerHttpClient(httpClient)
-            .build();
+    public Docker(final DockerClient dockerClient) {
+        this.dockerClient = dockerClient;
     }
 
     public String build(final String project) {
@@ -140,12 +129,6 @@ public class Docker implements Closeable {
         } else {
             LOG.error("Files differ");
         }
-    }
-
-    @Override
-    public void close() throws IOException {
-        dockerClient.close();
-        httpClient.close();
     }
 
 }
