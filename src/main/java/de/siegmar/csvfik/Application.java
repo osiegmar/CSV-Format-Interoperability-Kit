@@ -37,7 +37,7 @@ public class Application implements CommandLineRunner {
 
         for (final Project project : projects) {
             LOG.info("Run for project {}", project);
-            project.setImageId(docker.build(project.getName()));
+            project.setImageId(docker.build(project));
         }
 
         final List<Test> tests = listTests();

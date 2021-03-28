@@ -2,7 +2,7 @@ package de.siegmar.csvfik;
 
 import java.util.StringJoiner;
 
-public class Project {
+public class Project implements ProjectName {
 
     private final String name;
     private String imageId;
@@ -11,6 +11,12 @@ public class Project {
         this.name = name;
     }
 
+    /**
+     * project handle/identifier
+     *
+     * e.g. "sfm"
+     */
+    @Override
     public String getName() {
         return name;
     }
