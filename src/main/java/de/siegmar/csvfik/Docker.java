@@ -34,12 +34,13 @@ public class Docker {
         this.dockerClient = dockerClient;
     }
 
-    public String build(final String project) {
-        return buildImage(project);
+    public String build(final ProjectName projectName) {
+        return buildImage(projectName);
     }
 
     public void run(final Project project, final Test test) throws IOException, InterruptedException {
-        try (MDC.MDCCloseable ignored = MDC.putCloseable("test", project.getName() + "-" + test.getName())) {
+        try (MDC.MDCCloseable ignored = MDC.putCloseable("test",
+            project.getName() + "-" + test.getName())) {
             final String localPath = Paths.get("tests").toAbsolutePath().toString();
             final Path resultPath = Files.createDirectories(Paths.get("/tmp/csvfik", project.getName()));
 
@@ -55,14 +56,14 @@ public class Docker {
         }
     }
 
-    private String buildImage(final String projectName) {
-        LOG.info("Create docker image for {}", projectName);
+    private String buildImage(final ProjectName projectName) {
+        LOG.info("Create docker image for {}", projectName.getName());
 
-        final String imageId = dockerClient.buildImageCmd(new File("impl/" + projectName))
+        final String imageId = dockerClient.buildImageCmd(new File("impl/" + projectName.getName()))
             .exec(new BuildImageResultCallback())
             .awaitImageId();
 
-        LOG.info("Image for {} created: {}", projectName, imageId);
+        LOG.info("Image for {} created: {}", projectName.getName(), imageId);
         return imageId;
     }
 
@@ -79,7 +80,7 @@ public class Docker {
             .exec().getId();
 
         LOG.info("Container for {} created: {} (Image-ID: {}); Starting container",
-            project, containerId, project.getImageId());
+            project.getName(), containerId, project.getImageId());
         return containerId;
     }
 
@@ -120,14 +121,17 @@ public class Docker {
     }
 
     private void compareResult(final Path resultPath, final Test test) throws IOException {
-        final Path expectedFile = Paths.get("expects/" + test.getName() + ".csv");
 
-        final byte[] dataResultFile = Files.readAllBytes(resultPath.resolve(Paths.get(test.getName() + ".csv")));
-        final byte[] dataExpectedFile = Files.readAllBytes(expectedFile);
-        if (Arrays.equals(dataResultFile, dataExpectedFile)) {
-            LOG.info("Files are the same");
+        final byte[] dataResultFile = Files.readAllBytes(
+            resultPath.resolve(Paths.get(test.getName() + ".csv")));
+        final byte[] dataExpectedFile = Files.readAllBytes(
+            Paths.get("expects", test.getName() + ".csv"));
+
+        final boolean matches = Arrays.equals(dataResultFile, dataExpectedFile);
+        if (matches) {
+            LOG.info(">> Comparing impl output with expected: ok - matches");
         } else {
-            LOG.error("Files differ");
+            LOG.error(">> Comparing impl output with expected: MISMATCH");
         }
     }
 
